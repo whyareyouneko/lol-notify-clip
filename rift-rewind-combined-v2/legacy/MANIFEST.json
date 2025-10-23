@@ -1,0 +1,32 @@
+[
+  {
+    "zip": "lol-notify-clip-main.zip",
+    "extracted_to": "legacy/lol-notify-clip-main",
+    "files": 5
+  },
+  {
+    "zip": "lol-notify-clip-tempBranch.zip",
+    "extracted_to": "legacy/lol-notify-clip-tempBranch",
+    "files": 4
+  },
+  {
+    "zip": "lol-notify-clip-whyareyouneko-patch-LOG-IN-PAGE.zip",
+    "extracted_to": "legacy/lol-notify-clip-whyareyouneko-patch-LOG-IN-PAGE",
+    "files": 5
+  },
+  {
+    "zip": "lol-notify-clip-whyareyouneko-patch-LOG-IN-PAGE-1.zip",
+    "extracted_to": "legacy/lol-notify-clip-whyareyouneko-patch-LOG-IN-PAGE-1",
+    "files": 5
+  },
+  {
+    "zip": "lol-notify-clip-whyareyouneko-vote-me.zip",
+    "extracted_to": "legacy/lol-notify-clip-whyareyouneko-vote-me",
+    "files": 5
+  },
+  {
+    "zip": "lol-notify-clip-whyareyouneko-voteme-pls.zip",
+    "extracted_to": "legacy/lol-notify-clip-whyareyouneko-voteme-pls",
+    "files": 5
+  }
+]

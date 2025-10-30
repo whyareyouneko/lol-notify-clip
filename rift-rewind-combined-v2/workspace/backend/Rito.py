@@ -2,7 +2,7 @@ import requests
 import json
 
 
-# Step 1: Get PUUID by Riot ID
+
 def get_puuid(api_key, riot_id, region):
     """
     Fetches the PUUID of a given Riot ID.
@@ -23,7 +23,7 @@ def get_puuid(api_key, riot_id, region):
 
     try:
         response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raises HTTPError for bad responses
+        response.raise_for_status()  
         data = response.json()
         return data.get("puuid"), headers
     except requests.exceptions.RequestException as e:
@@ -31,7 +31,7 @@ def get_puuid(api_key, riot_id, region):
         return None
 
 
-# Step 2: Get Champion Mastery using platform routing (EUW = euw1)
+
 def champ_master(puuid, headers):
     """
     Fetches the champion mastery data for a given PUUID.

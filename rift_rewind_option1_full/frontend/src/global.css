@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* base theme */
+:root {
+  color-scheme: dark;
+}
+body {
+  @apply bg-[#010A13] text-white;
+  min-height: 100vh;
+  font-family: system-ui, sans-serif;
+}

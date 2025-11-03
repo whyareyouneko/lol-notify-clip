@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./global.css";
+import { BackendDemoPanel } from "./BackendDemoPanel";
 
 function Root() {
   return (
@@ -15,10 +16,8 @@ function Root() {
           <p className="text-white/60 text-sm mb-4">
             Hardcoded test player PUUID. Replace with real one.
           </p>
-          {/* @ts-ignore */}
           <div className="max-w-xl">
-            {/* You can swap 'demo-puuid-here' with a real PUUID */}
-            {React.createElement(require("./BackendDemoPanel").BackendDemoPanel, { puuid: "demo-puuid-here" })}
+            <BackendDemoPanel puuid="demo-puuid-here" />
           </div>
         </div>
       </div>

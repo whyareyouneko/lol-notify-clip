@@ -1,6 +1,6 @@
 const API_BASE = import.meta.env.VITE_LAMBDA_URL || "";
 
-async function callAPI(payloadOrParams: any, method: "GET"|"POST"="GET") {
+async function callAPI(payloadOrParams: any, method: "GET" | "POST" = "GET") {
   if (!API_BASE) {
     throw new Error("VITE_LAMBDA_URL not set. Create .env.local and define it.");
   }
@@ -13,7 +13,7 @@ async function callAPI(payloadOrParams: any, method: "GET"|"POST"="GET") {
   } else {
     const res = await fetch(API_BASE + "/", {
       method: "POST",
-      headers: { "Content-Type":"application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payloadOrParams),
     });
     if (!res.ok) throw new Error("API " + res.status);
@@ -21,10 +21,11 @@ async function callAPI(payloadOrParams: any, method: "GET"|"POST"="GET") {
   }
 }
 
-export async function apiGetRecap(puuid: string) {
-  return callAPI({ action: "getRecap", puuid }, "GET");
+// identifier = summoner name OR PUUID
+export async function apiGetRecap(identifier: string) {
+  return callAPI({ action: "getRecap", summonerName: identifier }, "GET");
 }
 
-export async function apiSummarize(puuid: string) {
-  return callAPI({ action: "summarize", puuid }, "POST");
+export async function apiSummarize(identifier: string) {
+  return callAPI({ action: "summarize", summonerName: identifier }, "POST");
 }

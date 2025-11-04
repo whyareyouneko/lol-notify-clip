@@ -21,11 +21,34 @@ async function callAPI(payloadOrParams: any, method: "GET" | "POST" = "GET") {
   }
 }
 
-// identifier = summoner name OR PUUID
-export async function apiGetRecap(identifier: string) {
-  return callAPI({ action: "getRecap", summonerName: identifier }, "GET");
+export async function apiGetRecap(
+  gameName: string,
+  tagLine: string,
+  routingRegion: string
+) {
+  return callAPI(
+    {
+      action: "getRecap",
+      gameName,
+      tagLine,
+      routingRegion,
+    },
+    "GET"
+  );
 }
 
-export async function apiSummarize(identifier: string) {
-  return callAPI({ action: "summarize", summonerName: identifier }, "POST");
+export async function apiSummarize(
+  gameName: string,
+  tagLine: string,
+  routingRegion: string
+) {
+  return callAPI(
+    {
+      action: "summarize",
+      gameName,
+      tagLine,
+      routingRegion,
+    },
+    "POST"
+  );
 }

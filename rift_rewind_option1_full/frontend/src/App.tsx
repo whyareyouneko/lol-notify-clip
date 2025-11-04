@@ -12,7 +12,9 @@ import { Toaster } from "./components/ui/sonner";
 import { Language } from "./utils/language";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  // start on recap; change to "dashboard" if you prefer
+  const [activeTab, setActiveTab] = useState("recap");
+
   const [activeRole, setActiveRole] = useState("Mid");
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [userId, setUserId] = useState("");
@@ -35,7 +37,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#010A13] dark">
+    <div className="min-h-screen bg-[#010A13] dark relative">
       <AppHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}

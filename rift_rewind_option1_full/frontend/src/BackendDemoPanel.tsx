@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { apiGetRecap, apiSummarize } from "./apiClient";
 
-export function BackendDemoPanel({ identifier }: { identifier: string }) {
+interface BackendDemoPanelProps {
+  gameName: string;
+  tagLine: string;
+  routingRegion: string;
+}
+
+export function BackendDemoPanel({
+  gameName,
+  tagLine,
+  routingRegion,
+}: BackendDemoPanelProps) {
   const [recap, setRecap] = useState<any>(null);
   const [coach, setCoach] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -17,8 +27,8 @@ export function BackendDemoPanel({ identifier }: { identifier: string }) {
       setCoach(null);
 
       try {
-        const r = await apiGetRecap(identifier);
-        const s = await apiSummarize(identifier);
+        const r = await apiGetRecap(gameName, tagLine, routingRegion);
+        const s = await apiSummarize(gameName, tagLine, routingRegion);
         if (cancelled) return;
         setRecap(r);
         setCoach(s);
@@ -33,7 +43,7 @@ export function BackendDemoPanel({ identifier }: { identifier: string }) {
     return () => {
       cancelled = true;
     };
-  }, [identifier]);
+  }, [gameName, tagLine, routingRegion]);
 
   if (loading) {
     return (
@@ -51,9 +61,7 @@ export function BackendDemoPanel({ identifier }: { identifier: string }) {
     );
   }
 
-  if (!recap || !coach) {
-    return null;
-  }
+  if (!recap || !coach) return null;
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
@@ -68,7 +76,6 @@ export function BackendDemoPanel({ identifier }: { identifier: string }) {
           Hidden gem: {recap.hidden_gem}
         </div>
       </div>
-
       <div>
         <div className="text-lg font-semibold text-white mb-2">
           Coach Summary (Bedrock)

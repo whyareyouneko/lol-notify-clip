@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { apiGetRecap, apiSummarize } from "../apiClient";
+import { apiGetRecap, apiSummarize, apiCompareLineup } from "../apiClient";
 
 const REGION_OPTIONS = [
   { id: "na", label: "NA", routingRegion: "americas" },
@@ -136,8 +136,7 @@ export function RecapPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selectedGames = useMemo(
-    () =>
-      games.filter((g) => selectedIds.includes(g.match_id)),
+    () => games.filter((g) => selectedIds.includes(g.match_id)),
     [games, selectedIds]
   );
 
@@ -223,6 +222,48 @@ export function RecapPage() {
     setSelectedIds([]);
   }
 
+  // Demo builder: constructs a 10-player lineup from the loaded games and asks backend to find a same-lineup match in the 1Y dataset.
+  async function runCompareLineupDemo() {
+    if (!games.length) {
+      setCoachError("Load games first.");
+      return;
+    }
+    // Use first 10 rows to form two teams. Roles default to game.role if present, else MID.
+    const mk = (g: RecentGame, side: "BLUE" | "RED") => ({
+      side,
+      role: g.role || "Mid",
+      champ: g.champion,
+      k: g.kills,
+      d: g.deaths,
+      a: g.assists,
+      cs: g.cs,
+      gold: g.gold,
+      win: g.win,
+    });
+
+    const blue = games.slice(0, 5).map((g) => mk(g, "BLUE"));
+    const red = games.slice(5, 10).map((g) => mk(g, "RED"));
+
+    const current = {
+      queue_id: games[0]?.queue_id ?? 420,
+      duration_s: games[0]?.game_duration ?? 1800,
+      teams: [...blue, ...red],
+    };
+
+    try {
+      const res = await apiCompareLineup(current);
+      if (res?.found && res?.summary) {
+        setSummary(res.summary);
+      } else if (res?.found === false) {
+        setSummary("No exact lineup match found in the 1Y dataset.");
+      } else {
+        setSummary("Compare lineup returned no text.");
+      }
+    } catch (e: any) {
+      setSummary("Compare lineup failed.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header + controls */}
@@ -297,6 +338,15 @@ export function RecapPage() {
             className="px-4 py-2 rounded-md bg-[#C8AA6E] text-black text-sm font-semibold disabled:opacity-60"
           >
             {loading ? "Loading…" : "Load recap"}
+          </button>
+
+          <button
+            onClick={runCompareLineupDemo}
+            disabled={!games.length}
+            className="px-4 py-2 rounded-md bg-white/10 border border-white/20 text-white text-sm font-semibold disabled:opacity-50"
+            title="Compare current lineup against identical lineups in the 1-year dataset"
+          >
+            Compare lineup
           </button>
         </div>
 

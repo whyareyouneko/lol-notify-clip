@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import { apiGetRecap, apiSummarize } from "./apiClient";
 
-interface BackendDemoPanelProps {
+type BackendDemoPanelProps = {
   gameName: string;
   tagLine: string;
   routingRegion: string;
-}
+};
 
 export function BackendDemoPanel({
   gameName,
   tagLine,
   routingRegion,
 }: BackendDemoPanelProps) {
-  const [recap, setRecap] = useState<any>(null);
-  const [coach, setCoach] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [recap, setRecap] = useState<any | null>(null);
+  const [coach, setCoach] = useState<any | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,8 +27,17 @@ export function BackendDemoPanel({
       setCoach(null);
 
       try {
+        // Riot stats
         const r = await apiGetRecap(gameName, tagLine, routingRegion);
-        const s = await apiSummarize(gameName, tagLine, routingRegion);
+
+        // Lane-specific AI summary (hard-code lane for this debug panel)
+        const s = await apiSummarize(
+          gameName,
+          tagLine,
+          routingRegion,
+          "Mid" // default lane for backend demo
+        );
+
         if (cancelled) return;
         setRecap(r);
         setCoach(s);
@@ -45,45 +54,50 @@ export function BackendDemoPanel({
     };
   }, [gameName, tagLine, routingRegion]);
 
-  if (loading) {
-    return (
-      <div className="p-4 rounded-xl border border-white/20 bg-white/5 text-sm text-white/70">
-        Loading recap from Riot + AWS…
-      </div>
-    );
-  }
-
-  if (err) {
-    return (
-      <div className="p-4 rounded-xl border border-red-500/40 bg-red-500/10 text-sm text-red-200">
-        Backend error: {err}
-      </div>
-    );
-  }
-
-  if (!recap || !coach) return null;
-
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <div>
-        <div className="text-lg font-semibold text-white mb-2">
-          Season snapshot
+    <div className="rounded-xl border border-white/10 bg-black/50 p-4 text-xs text-white/80 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold text-sm text-white">
+          Backend demo panel
         </div>
-        <pre className="text-[11px] text-white/80 bg-black/40 p-2 rounded max-h-48 overflow-y-auto">
-          {JSON.stringify(recap.player_overview, null, 2)}
-        </pre>
-        <div className="text-xs text-[#0AC8B9] mt-2 font-medium">
-          Hidden gem: {recap.hidden_gem}
-        </div>
-      </div>
-      <div>
-        <div className="text-lg font-semibold text-white mb-2">
-          Coach Summary (Bedrock)
-        </div>
-        <div className="text-xs whitespace-pre-wrap text-white/90 bg-black/40 p-2 rounded max-h-48 overflow-y-auto">
-          {coach.summary}
+        <div className="text-[11px] text-white/50">
+          gameName: <span className="font-mono">{gameName}</span> · tag:{" "}
+          <span className="font-mono">{tagLine}</span> · region:{" "}
+          <span className="font-mono">{routingRegion}</span>
         </div>
       </div>
+
+      {loading && (
+        <div className="text-[11px] text-white/60">Loading from Lambda…</div>
+      )}
+
+      {err && (
+        <div className="text-[11px] text-red-300 bg-red-900/30 border border-red-500/40 rounded px-2 py-1">
+          Error: {err}
+        </div>
+      )}
+
+      {recap && (
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-white/50 mb-1">
+            Recap payload
+          </div>
+          <pre className="max-h-40 overflow-y-auto bg-black/40 rounded p-2">
+            {JSON.stringify(recap, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {coach && (
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-white/50 mb-1">
+            Coaching payload
+          </div>
+          <pre className="max-h-40 overflow-y-auto bg-black/40 rounded p-2">
+            {JSON.stringify(coach, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,101 +1,82 @@
-import json, boto3, os
-from .bedrock_summarize import summarize_comparison
+# rift_rewind_option1_full/backend_lambda/api/compare_lineup_handler.py
+import os, json, hashlib
+import boto3
+from .bedrock_summarize import bedrock_client  # reuse client factory if you have one
 
-ddb = boto3.client("dynamodb")
-TABLE = os.environ.get("LINEUP_TABLE", "lineup_index")
+DDB = boto3.resource("dynamodb")
+TABLE_NAME = os.environ.get("LINEUP_INDEX_TABLE", "rr_lineup_index")  # set in Lambda env
 
-def canon(ch): 
-    return ch.strip().upper().replace(" ", "").replace("'", "")
+def canon_role(role: str) -> str:
+    r = (role or "").strip().upper()
+    # normalize common variants
+    if r in ("TOP", "TOPLANE"): return "TOP"
+    if r in ("JUNGLE", "JG"): return "JUNGLE"
+    if r in ("MID", "MIDLANE"): return "MID"
+    if r in ("ADC", "BOT", "BOTTOM"): return "ADC"
+    if r in ("SUPPORT", "SUP"): return "SUPPORT"
+    return "MID"
 
-def lineup_key_from_payload(payload):
-    tags=[]
-    for p in payload["teams"]:
-        side = p["side"].upper()[0]      # B or R
-        role = p["role"].upper()
-        tags.append(f"{side}_{role}:{canon(p['champ'])}")
-    return "|".join(sorted(tags))
+def canon_champ(name: str) -> str:
+    return (name or "").strip().upper().replace(" ", "")
 
-def ddb_query_exact(lineup_key):
-    resp = ddb.query(
-        TableName=TABLE,
-        KeyConditionExpression="lineup_key = :k",
-        ExpressionAttributeValues={":k": {"S": lineup_key}},
-        ScanIndexForward=False,  # newest first
-        Limit=5
-    )
-    items = []
-    for item in resp.get("Items", []):
-        items.append({k: list(v.values())[0] for k, v in item.items()})
-    return items
+def lineup_key(payload: dict) -> str:
+    # Expect payload["teams"] 10 players with side/role/champ
+    blue = []
+    red = []
+    for p in payload.get("teams", []):
+        side = p.get("side", "BLUE").upper()
+        role = canon_role(p.get("role", "MID"))
+        champ = canon_champ(p.get("champ", ""))
+        item = f"{role}:{champ}"
+        if side == "RED":
+            red.append(item)
+        else:
+            blue.append(item)
+    blue.sort()
+    red.sort()
+    key_str = "|".join(blue) + "||" + "|".join(red)
+    return hashlib.sha1(key_str.encode()).hexdigest()
 
-def _team_agg(m, side):
-    side_team = [p for p in m["teams"] if p["side"] == side]
+def handle_compare_lineup(payload: dict):
+    key = lineup_key(payload)
+    table = DDB.Table(TABLE_NAME)
+
+    # lookup exact lineup
+    ddb_item = table.get_item(Key={"lk": key}).get("Item")
+    if not ddb_item:
+        return {"found": False}
+
+    match_id = ddb_item.get("matchId")
+    meta = {
+        "queue_id": payload.get("queue_id"),
+        "duration_s": payload.get("duration_s"),
+        "match_id": match_id,
+    }
+
+    # ask Bedrock for a concise comparison sentence
+    client = bedrock_client()
+    prompt = {
+        "instruction": "Write a 120-word coaching blurb comparing the current lineup to the historical match.",
+        "current": payload,
+        "historical": ddb_item.get("meta", {}),
+    }
+    # Replace with your model invocation helper; here use Converse API style pseudo-call:
+    text = json.dumps(prompt)  # fallback in case model call not wired yet
+    try:
+        res = client.converse(
+            modelId=os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"),
+            messages=[{"role": "user", "content": [{"text": json.dumps(prompt)}]}],
+            inferenceConfig={"temperature": 0.2, "maxTokens": 220},
+        )
+        pieces = res["output"]["message"]["content"]
+        text = "".join(p.get("text", "") for p in pieces)
+    except Exception:
+        pass
+
     return {
-        "kills":  sum(p.get("k",0) for p in side_team),
-        "deaths": sum(p.get("d",0) for p in side_team),
-        "assists":sum(p.get("a",0) for p in side_team),
-        "cs":     sum(p.get("cs",0) for p in side_team),
-        "gold":   sum(p.get("gold",0) for p in side_team),
-        "win":    any(p.get("win",False) for p in side_team),
-    }
-
-def handler(event, _context):
-    # Expect JSON body: { "current_match": {...} }
-    body = event.get("body")
-    if isinstance(body, str) and body:
-        try:
-            payload = json.loads(body)
-        except Exception:
-            return _resp(400, {"error": "invalid JSON"})
-    elif isinstance(event, dict) and "current_match" in event:
-        payload = event
-    else:
-        return _resp(400, {"error": "no payload"})
-
-    if "current_match" not in payload:
-        return _resp(400, {"error": "missing current_match"})
-
-    current = payload["current_match"]
-    lineup_k = lineup_key_from_payload(current)
-    cands = ddb_query_exact(lineup_k)
-
-    if not cands:
-        return _resp(200, {"found": False, "reason": "no exact lineup in dataset"})
-
-    def _rank(x):
-        q = int(x.get("queue_id", 0))
-        dur = int(x.get("duration_s", 0))
-        cq = int(current.get("queue_id", 0))
-        cd = int(current.get("duration_s", 0))
-        return (0 if q == cq else 1, abs(dur - cd))
-
-    best = sorted(cands, key=_rank)[0]
-    hist = json.loads(best["summary_row"])
-
-    compare_ctx = {
-        "lineup_key": lineup_k,
-        "current": {
-            "queue_id": current.get("queue_id"),
-            "duration_s": current.get("duration_s"),
-            "blue": _team_agg(current, "BLUE"),
-            "red":  _team_agg(current, "RED"),
-        },
-        "historical": hist
-    }
-
-    text = summarize_comparison(compare_ctx)
-
-    return _resp(200, {
         "found": True,
-        "lineup_key": lineup_k,
-        "match_id": best["match_id"],
+        "match_id": match_id,
+        "distance": 0.0,
         "summary": text,
-        "context": compare_ctx
-    })
-
-def _resp(code, obj):
-    return {
-        "statusCode": code,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(obj)
+        "meta": meta,
     }

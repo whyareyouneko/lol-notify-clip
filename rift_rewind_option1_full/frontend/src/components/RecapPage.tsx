@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { apiGetRecap, apiSummarize, apiCompareLineup } from "../apiClient";
+import LineupCompareCard from "../components/LineupCompareCard";
 
 const REGION_OPTIONS = [
   { id: "na", label: "NA", routingRegion: "americas" },
@@ -535,4 +536,5 @@ function StatCard({ label, value, sub }: StatCardProps) {
       )}
     </div>
   );
+  
 }

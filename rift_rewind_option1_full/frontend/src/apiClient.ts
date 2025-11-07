@@ -80,11 +80,18 @@ export type ComparePayload = {
   teams: LineupPlayer[];   // 10 entries
 };
 
+export type CompareAlternative = {
+  id: string;
+  score?: number;
+  snippet?: string;
+};
+
 export type CompareResponse = {
   found: boolean;
   match_id?: string;
   distance?: number;       // 0.0 exact, >0 fuzzy
   summary?: string;        // Bedrock agent text
+  alternatives?: CompareAlternative[]; // present when KB fallback used
 };
 
 // ===== Calls =====
